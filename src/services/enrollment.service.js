@@ -1,7 +1,12 @@
+const mongoose = require("mongoose");
 const Enrollment = require("../models/Enrollment");
 const Course = require("../models/Course");
 
 const enrollCourse = async (studentId, courseId, batchId = null) => {
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    throw new Error("Invalid course ID");
+  }
+
   const course = await Course.findById(courseId);
   if (!course) throw new Error("Course not found");
 
@@ -11,16 +16,18 @@ const enrollCourse = async (studentId, courseId, batchId = null) => {
     course: courseId,
   });
 
-  if (!enrollment) {
-    // Inverted logic bug: throws error when NOT enrolled
+  if (enrollment) {
     throw new Error("Already enrolled in this course");
   }
+
+  const validBatchId =
+    batchId && mongoose.Types.ObjectId.isValid(batchId) ? batchId : null;
 
   // Create new enrollment
   enrollment = await Enrollment.create({
     student: studentId,
     course: courseId,
-    batchId,
+    batchId: validBatchId,
     progress: { completedLessons: [], percent: 0 },
   });
 
@@ -34,6 +41,10 @@ const getMyEnrollments = async (studentId) => {
 };
 
 const completeLesson = async (enrollId, lessonId) => {
+  if (!mongoose.Types.ObjectId.isValid(enrollId)) {
+    throw new Error("Invalid enrollment ID");
+  }
+
   const enrollment = await Enrollment.findById(enrollId);
   if (!enrollment) throw new Error("Enrollment not found");
 
@@ -48,8 +59,8 @@ const completeLesson = async (enrollId, lessonId) => {
 
   // calculate percent
   const course = await Course.findById(enrollment.course);
-  const totalLessons = course.syllabus.reduce(
-    (sum, mod) => sum + mod.lessons.length,
+  const totalLessons = (course?.syllabus || []).reduce(
+    (sum, mod) => sum + (mod.lessons?.length || 0),
     0
   );
 
@@ -57,8 +68,7 @@ const completeLesson = async (enrollId, lessonId) => {
   enrollment.progress.percent =
     totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
 
-  // Missing await on async Mongoose save (Code-9 bug)
-  enrollment.save();
+  await enrollment.save();
   return enrollment;
 };
 
