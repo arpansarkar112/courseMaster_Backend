@@ -17,10 +17,12 @@ const getCourses = async (req, res) => {
 
 const getCourseById = async (req, res) => {
   try {
+    await connectDB();
     const course = await courseService.getCourseById(req.params.id);
     res.json(course);
   } catch (err) {
-    res.status(404).json({ message: err.message });
+    const status = err.statusCode || (err.name === "CastError" ? 400 : 404);
+    res.status(status).json({ success: false, message: err.message });
   }
 };
 

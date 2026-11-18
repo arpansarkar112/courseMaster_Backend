@@ -1,5 +1,6 @@
 // service to handle admin-related operations
 
+const mongoose = require("mongoose");
 const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
 const AssignmentSubmission = require("../models/AssignmentSubmission");
@@ -11,12 +12,18 @@ const createCourse = async (payload) => {
 };
 
 const updateCourse = async (id, payload) => {
-  const course = await Course.findByIdAndUpdate(id, payload, { new: true });
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error("Invalid course ID format");
+  }
+  const course = await Course.findByIdAndUpdate(id, payload, { new: true, runValidators: true });
   if (!course) throw new Error("Course not found");
   return course;
 };
 
 const deleteCourse = async (id) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error("Invalid course ID format");
+  }
   const course = await Course.findByIdAndDelete(id);
   if (!course) throw new Error("Course not found");
   return { message: "Course deleted" };
@@ -36,10 +43,10 @@ const getEnrollments = async (query) => {
     .sort({ createdAt: -1 });
 };
 
-// ✅ NEW: get all assignment submissions (Code-8 bug: queries by courseId instead of course)
+// ✅ NEW: get all assignment submissions
 const getAssignments = async (query = {}) => {
   const filter = {};
-  if (query.courseId) filter.courseId = query.courseId; // Mongoose schema has 'course', not 'courseId'
+  if (query.courseId) filter.course = query.courseId;
 
   const submissions = await AssignmentSubmission.find(filter)
     .populate("student", "name email")

@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const User = require("../models/User");
 
 const getAllUsers = async () => {
@@ -5,6 +6,9 @@ const getAllUsers = async () => {
 };
 
 const deleteUser = async (userId) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid user ID format");
+  }
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
   await User.findByIdAndDelete(userId);
@@ -12,6 +16,9 @@ const deleteUser = async (userId) => {
 };
 
 const updateUserRole = async (userId, role) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid user ID format");
+  }
   if (!["student", "admin"].includes(role)) {
     throw new Error("Invalid role");
   }
@@ -25,6 +32,9 @@ const updateUserRole = async (userId, role) => {
 };
 
 const toggleBanUser = async (userId) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid user ID format");
+  }
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
   user.isBanned = !user.isBanned;
